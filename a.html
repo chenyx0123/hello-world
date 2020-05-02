@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* {
+  box-sizing: border-box;
+}
+
+.Header {
+  padding:30px;
+  height:150px;
+  text-align:center;
+}
+
+ul {
+  margin:0;
+  padding:0;
+  list-style-type:none;
+  display:block;
+  overflow: hidden;
+  background-color:#333;
+}
+
+li {
+  float:left;
+}
+
+li a{
+  display:block;
+  color:white;
+  text-decoration: none;
+  background-color: #333;
+  padding:15px;
+  }
+  
+.a {
+  float:left;
+  width:50%;
+  height:200px;
+  text-align:center;
+  padding:5px;
+}
+
+.dropdown {
+  position:absolute;
+  display:none;
+  z-index: 1;
+  width:200px;
+}
+.dropdown a{
+  background-color:#f1f1f1;
+  color:black;
+  float:none;
+}
+
+.Foot {
+  text-align:center;
+}
+
+.Column:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.a:hover,li a:hover{
+  color:black;
+  background-color:#f1f1f1;
+}
+
+.dropdown a:hover{
+  color:white;
+  background-color:#333;
+}
+
+li:hover div{
+  display:block;
+}
+
+li:hover a{
+  color:black;
+  background-color:#f1f1f1;
+}
+
+</style>
+</head>
+<body>
+<div class="Header"><h1>Hello</h1></div>
+<ul>
+<li><a id="A1" href="#">Link1</a>
+  <div class="dropdown">
+  <a href="#">A</a>
+  <a href="#">B</a>
+  <a href="#">C</a>
+  </div>
+</li>
+<li><a id="A2" href="#">Link2</a>
+  <div class="dropdown" >
+  <a href="#">A</a>
+  <a href="#">B</a>
+  <a href="#">C</a>
+  </div>
+</li>
+<li><a id="A3" href="#">Link3</a>
+  <div class="dropdown">
+  <a href="#">A</a>
+  <a href="#">B</a>
+  <a href="#">C</a>
+  </div>
+</li>
+</ul><br>
+<div class="Column">
+<div class="a"><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+Maecenas sit amet pretium urna. Vivamus venenatis velit nec neque ultricies,
+ eget elementum magna tristique. Quisque vehicula, risus eget aliquam placerat,
+ purus leo tincidunt eros, eget luctus quam orci in velit. Praesent scelerisque 
+ tortor sed accumsan convallis.</p></div>
+<div class="a"><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+Maecenas sit amet pretium urna. Vivamus venenatis velit nec neque ultricies,
+ eget elementum magna tristique. Quisque vehicula, risus eget aliquam placerat,
+ purus leo tincidunt eros, eget luctus quam orci in velit. Praesent scelerisque 
+ tortor sed accumsan convallis.</p></div>
+</div>
+<div class="Foot"><h1>Bybe</h1></div>
+</body>
+</html>
