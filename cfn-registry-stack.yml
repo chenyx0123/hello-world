@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Conditions:
+  IsDevelopment: !Equals
+    - !Ref 'NodeEnv'
+    - 'development'
+  IsNotDevelopment: !Not
+    - !Equals
+      - !Ref 'NodeEnv'
+      - 'development'
+  IsNotProduction: !Not
+    - !Equals
+      - !Ref 'NodeEnv'
+      - 'production'
+  IsProduction: !Equals
+    - !Ref 'NodeEnv'
+    - 'production'
+  IsStaging: !Equals
+    - !Ref 'NodeEnv'
+    - 'staging'
+Description: |
+  Production deployment:
+  ```
+  export SP=prod SN=market-webapp-ssr-engine; sam deploy --resolve-s3 --s3-prefix ${SN} --stack-name ${SP}-${SN}-registry -t ./cfn-registry-stack.yml --parameter-overrides StackSet=${SP} StackName=${SN} `cat production.properties`
+  ```
+Parameters:
+  NodeEnv:
+    AllowedValues: ['development', 'staging', 'production']
+    Type: String
+  StackName:
+    Type: String
+  StackSet:
+    Type: String
+Resources:
+  FrontendSsrNext:
+    Properties:
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Protect main",
+                "selection": {
+                  "tagStatus": "tagged",
+                  "tagPrefixList": ["main"],
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 1
+                },
+                "action": { "type": "expire" }
+              },
+              {
+                "rulePriority": 2,
+                "description": "Delete untagged",
+                "selection": {
+                  "tagStatus": "untagged",
+                  "countType": "sinceImagePushed",
+                  "countUnit": "days",
+                  "countNumber": 1
+                },
+                "action": { "type": "expire" }
+              },
+              {
+                "rulePriority": 3,
+                "description": "Delete old tags",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "sinceImagePushed",
+                  "countUnit": "days",
+                  "countNumber": 14
+                },
+                "action": { "type": "expire" }
+              }
+            ]
+          }
+      RepositoryName: !Sub
+        - '${Prefix}${StackName}'
+        - Prefix: !If
+            - IsProduction
+            - ''
+            - dev-
+    Type: AWS::ECR::Repository

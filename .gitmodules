@@ -1,0 +1,4 @@
+[submodule "infra-next-ssr-engine-updater"]
+	path = infra-next-ssr-engine-updater
+	url = git@github.com:flyingmilktea/infra-next-ssr-engine-updater.git
+	branch = main

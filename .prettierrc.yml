@@ -1,0 +1,9 @@
+bracketSameLine: false
+jsonRecursiveSort: true
+plugins:
+  - 'prettier-plugin-sort-json'
+  - 'prettier-plugin-packagejson'
+semi: true
+singleQuote: true
+tabWidth: 2
+trailingComma: 'es5'

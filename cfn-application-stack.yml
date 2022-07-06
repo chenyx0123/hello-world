@@ -1,0 +1,497 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Conditions:
+  IsDevelopment: !Equals
+    - !Ref 'NodeEnv'
+    - 'development'
+  IsNotDevelopment: !Not
+    - !Equals
+      - !Ref 'NodeEnv'
+      - 'development'
+  IsNotProduction: !Not
+    - !Equals
+      - !Ref 'NodeEnv'
+      - 'production'
+  IsProduction: !Equals
+    - !Ref 'NodeEnv'
+    - 'production'
+  IsStaging: !Equals
+    - !Ref 'NodeEnv'
+    - 'staging'
+Description: |
+  Development:
+  ```
+  export SS=dev;
+  export SN=market-webapp-ssr-engine; yes | sam deploy --resolve-s3 --s3-prefix ${SN} --resolve-image-repos --stack-name ${SS}-${SN} -t ./cfn-application-stack.yml --parameter-overrides StackSet=$SS StackName=$SN `cat development.properties` WorkaroundSubSSM=$(date --iso-8601=s)
+  ```
+
+  Staging:
+  ```
+  export SS=stage;
+  SN=market-webapp-ssr-engine; sam deploy --resolve-s3 --s3-prefix ${SN} --resolve-image-repos --stack-name ${SS}-${SN} -t ./cfn-application-stack.yml --parameter-overrides StackSet=$SS StackName=$SN `cat staging.properties` WorkaroundSubSSM=$(date --iso-8601=s)
+  ```
+
+  Production:
+  ```
+  export SP=prod SN=market-webapp-ssr-engine; sam deploy --resolve-s3 --s3-prefix ${SN} --resolve-image-repos --stack-name ${SP}-${SN} -t ./cfn-application-stack.yml --parameter-overrides StackSet=$SP StackName=$SN `cat production.properties` WorkaroundSubSSM=$(date --iso-8601=s)
+  ```
+Outputs:
+  CloudfrontEndpointAwsUrl:
+    Description: Market web cloudfront endpoint aws provided url
+    Export:
+      Name: !Sub '${StackSet}-${StackName}-CloudfrontEndpointAwsUrl'
+    Value: !Sub 'https://${CloudfrontDistribution.DomainName}'
+  CloudfrontEndpointDomainDnsUrl:
+    Condition: IsNotDevelopment
+    Description: Market web cloudfront endpoint dns url
+    Export:
+      Name: !Sub '${StackSet}-${StackName}-CloudfrontEndpointDomainDnsUrl'
+    Value: !Sub 'https://${CloudfrontEndpointDomainARecord}'
+  CloudfrontEndpointSubdomainDnsUrl:
+    Description: Market web cloudfront endpoint dns url
+    Export:
+      Name: !Sub '${StackSet}-${StackName}-CloudfrontEndpointSubdomainDnsUrl'
+    Value: !Sub 'https://${CloudfrontEndpointSubdomainARecord}'
+  ReactEndpointAwsUrl:
+    Description: Market web react endpoint aws provided url
+    Export:
+      Name: !Sub '${StackSet}-${StackName}-ReactEndpointAwsUrl'
+    Value: !GetAtt 'ReactWebappBucket.WebsiteURL'
+  ReactEndpointDnsUrl:
+    Description: Market web react endpoint dns url
+    Export:
+      Name: !Sub '${StackSet}-${StackName}-ReactEndpointDnsUrl'
+    Value: !Sub 'http://${ReactEndpointARecord}'
+  SsrEndpointAwsUrl:
+    Description: Market web ssr endpoint aws provided url
+    Export:
+      Name: !Sub '${StackSet}-${StackName}-SsrEndpointAwsUrl'
+    Value: !GetAtt 'ServerlessHttpApi.ApiEndpoint'
+  SsrEndpointDnsUrl:
+    Description: Market web ssr endpoint dns url
+    Export:
+      Name: !Sub '${StackSet}-${StackName}-SsrEndpointDnsUrl'
+    Value: !Sub 'https://${SsrEndpointARecord}'
+Parameters:
+  AmplitudeKey:
+    Type: String
+  BuildPipelineName:
+    AllowedValues:
+      - prod-infra-container-codebuild-core
+      - dev-infra-container-codebuild-core
+    Type: String
+  BuildRepositoryName:
+    AllowedValues:
+      - 'market-webapp-ssr-engine'
+    Default: 'market-webapp-ssr-engine'
+    Type: String
+  BuildTrackedReferenceName:
+    Type: String
+  BuildTrackedReferenceType:
+    Type: String
+  GtagId:
+    Type: String
+  MarketUrlPrefix:
+    Default: 'market'
+    Type: String
+  NodeEnv:
+    AllowedValues:
+      - 'development'
+      - 'staging'
+      - 'production'
+    Type: String
+  StackName:
+    Type: String
+  StackSet:
+    Type: String
+  WorkaroundSubSSM:
+    Type: String
+Resources:
+  CloudfrontDistribution:
+    Metadata:
+      WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - !Sub
+            - '${MarketUrlPrefix}.${SubdomainName}'
+            - SubdomainName: !Sub '{{resolve:ssm:/${StackSet}/infra/subdomain-name}}'
+          - !Sub
+            - '${MarketUrlPrefix}.${DomainName}'
+            - DomainName: !Sub '{{resolve:ssm:/${StackSet}/infra/domain-name}}'
+        CacheBehaviors:
+          - AllowedMethods:
+              - HEAD
+              - GET
+              - OPTIONS
+            CachePolicyId: !If
+              - IsDevelopment
+              - 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+              - !Ref 'CloudfrontRxCachePolicy'
+            CachedMethods:
+              - HEAD
+              - GET
+              - OPTIONS
+            Compress: true
+            PathPattern: /static/*
+            TargetOriginId: market-rx
+            ViewerProtocolPolicy: redirect-to-https
+          - AllowedMethods:
+              - HEAD
+              - GET
+              - OPTIONS
+            CachePolicyId: !If
+              - IsDevelopment
+              - 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+              - !Ref 'CloudfrontRxCachePolicy'
+            CachedMethods:
+              - HEAD
+              - GET
+              - OPTIONS
+            Compress: true
+            PathPattern: /index.html
+            TargetOriginId: market-rx
+            ViewerProtocolPolicy: redirect-to-https
+          - AllowedMethods:
+              - HEAD
+              - GET
+              - OPTIONS
+            CachePolicyId: !If
+              - IsDevelopment
+              - 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+              - !Ref 'CloudfrontRxCachePolicy'
+            CachedMethods:
+              - HEAD
+              - GET
+              - OPTIONS
+            Compress: true
+            PathPattern: /asset-manifest.json
+            TargetOriginId: market-rx
+            ViewerProtocolPolicy: redirect-to-https
+        CustomErrorResponses:
+          - ErrorCachingMinTTL: 60
+            ErrorCode: 400
+            ResponseCode: 200
+            ResponsePagePath: /404
+          - ErrorCachingMinTTL: 10
+            ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /404
+          - ErrorCachingMinTTL: 10
+            ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /404
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - HEAD
+            - GET
+            - OPTIONS
+          CachePolicyId: !If
+            - IsDevelopment
+            - 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            - !Ref 'CloudfrontNxCachePolicy'
+          CachedMethods:
+            - HEAD
+            - GET
+            - OPTIONS
+          Compress: true
+          OriginRequestPolicyId: !Ref 'CloudfrontNxOriginRequestPolicy'
+          TargetOriginId: market-nx
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: /
+        Enabled: true
+        HttpVersion: http2
+        Origins:
+          - CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+            DomainName: !Ref 'SsrEndpointARecord'
+            Id: market-nx
+          - CustomOriginConfig:
+              OriginProtocolPolicy: http-only
+            DomainName: !Ref 'ReactEndpointARecord'
+            Id: market-rx
+        PriceClass: PriceClass_200
+        ViewerCertificate:
+          AcmCertificateArn: !Sub '{{resolve:ssm:/${StackSet}/infra/certificates/root/global/arn}}'
+          MinimumProtocolVersion: TLSv1.1_2016
+          SslSupportMethod: sni-only
+    Type: AWS::CloudFront::Distribution
+  CloudfrontEndpointDomainARecord:
+    Condition: IsNotDevelopment
+    Metadata:
+      WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt 'CloudfrontDistribution.DomainName'
+        HostedZoneId: Z2FDTNDATAQYW2
+      HostedZoneId: !Sub '{{resolve:ssm:/${StackSet}/infra/hosted-zones/root/id}}'
+      Name: !Sub
+        - '${MarketUrlPrefix}.${DomainName}'
+        - DomainName: !Sub '{{resolve:ssm:/${StackSet}/infra/domain-name}}'
+      Type: A
+    Type: AWS::Route53::RecordSet
+  CloudfrontEndpointSubdomainARecord:
+    Metadata:
+      WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt 'CloudfrontDistribution.DomainName'
+        HostedZoneId: Z2FDTNDATAQYW2
+      HostedZoneId: !Sub '{{resolve:ssm:/${StackSet}/infra/hosted-zones/default/id}}'
+      Name: !Sub
+        - '${MarketUrlPrefix}.${SubdomainName}'
+        - SubdomainName: !Sub '{{resolve:ssm:/${StackSet}/infra/subdomain-name}}'
+      Type: A
+    Type: AWS::Route53::RecordSet
+  CloudfrontEndpointSubdomainMapping:
+    Properties:
+      ApiId: !Ref 'ServerlessHttpApi'
+      DomainName: !Ref 'CloudfrontEndpointSubdomainName'
+      Stage: !Ref 'ServerlessHttpApiApiGatewayDefaultStage'
+    Type: AWS::ApiGatewayV2::ApiMapping
+  CloudfrontEndpointSubdomainName:
+    Metadata:
+      WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+    Properties:
+      DomainName: !Sub
+        - '${MarketUrlPrefix}.${SubdomainName}'
+        - SubdomainName: !Sub '{{resolve:ssm:/${StackSet}/infra/subdomain-name}}'
+      DomainNameConfigurations:
+        - CertificateArn: !Sub '{{resolve:ssm:/${StackSet}/infra/certificates/root/regional/arn}}'
+          EndpointType: REGIONAL
+          SecurityPolicy: TLS_1_2
+    Type: AWS::ApiGatewayV2::DomainName
+  CloudfrontNxCachePolicy:
+    Properties:
+      CachePolicyConfig:
+        DefaultTTL: 300
+        MaxTTL: 3600
+        MinTTL: 0
+        Name: !Sub '${StackSet}-${StackName}-nx-policy'
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: none
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: all
+    Type: AWS::CloudFront::CachePolicy
+  CloudfrontNxOriginRequestPolicy:
+    Properties:
+      OriginRequestPolicyConfig:
+        CookiesConfig:
+          CookieBehavior: all
+        HeadersConfig:
+          HeaderBehavior: none
+        Name: !Sub '${StackSet}-${StackName}-nx-policy'
+        QueryStringsConfig:
+          QueryStringBehavior: all
+    Type: AWS::CloudFront::OriginRequestPolicy
+  CloudfrontRxCachePolicy:
+    Properties:
+      CachePolicyConfig:
+        DefaultTTL: 3600
+        MaxTTL: 604800
+        MinTTL: 60
+        Name: !Sub '${StackSet}-${StackName}-rx-policy'
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: none
+          EnableAcceptEncodingBrotli: true
+          EnableAcceptEncodingGzip: true
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: all
+    Type: AWS::CloudFront::CachePolicy
+  NextSsrEngine:
+    Metadata:
+      WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+    Properties:
+      Environment:
+        Variables:
+          NEXT_PUBLIC_AMPLITUDE_KEY: !Ref 'AmplitudeKey'
+          NEXT_PUBLIC_CANONICAL_DOMAIN_NAME: !Sub
+            - '${MarketUrlPrefix}.${DomainName}'
+            - DomainName: !If
+                - IsDevelopment
+                - !Sub '{{resolve:ssm:/${StackSet}/infra/subdomain-name}}'
+                - !Sub '{{resolve:ssm:/${StackSet}/infra/domain-name}}'
+          NEXT_PUBLIC_GRAPHQL_URL: !Sub
+            - 'https://api.${DomainName}/graphql'
+            - DomainName: !If
+                - IsDevelopment
+                - !Sub '{{resolve:ssm:/${StackSet}/infra/subdomain-name}}'
+                - !Sub '{{resolve:ssm:/${StackSet}/infra/domain-name}}'
+          NEXT_PUBLIC_GTAG_ID: !Ref 'GtagId'
+          NEXT_PUBLIC_USE_BASELINE_SEO_DEFAULT: true
+          NEXT_TELEMETRY_DISABLED: 1
+          NODE_ENV: !If
+            - IsStaging
+            - production
+            - !Ref 'NodeEnv'
+          RX_BUCKET_NAME: !Ref 'ReactWebappBucket'
+      Events:
+        HttpGet:
+          Type: HttpApi
+        Schedule:
+          Properties:
+            Input: !Sub
+              - |
+                {
+                  "version": "2.0",
+                  "routeKey": "$default",
+                  "rawPath": "/",
+                  "rawQueryString": "",
+                  "headers": {
+                    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "accept-encoding": "gzip, deflate, br",
+                    "accept-language": "en-GB,en;q=0.9",
+                    "content-length": "0",
+                    "host": "${MarketUrlPrefix}-nx.${SubdomainName}",
+                    "if-none-match": "\"2645-wJQt4GvWkYCoWZDZBeny5JTz8hg\"",
+                    "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/95.0.4638.50 Mobile/15E148 Safari/604.1",
+                    "x-amzn-trace-id": "Root=1-61923ad4-11a2b801160dd0d119abb6c0",
+                    "x-forwarded-for": "42.200.211.118",
+                    "x-forwarded-port": "443",
+                    "x-forwarded-proto": "https"
+                  },
+                  "requestContext": {
+                    "accountId": "846529365321",
+                    "apiId": "ioefc7wi4k",
+                    "domainName": "${MarketUrlPrefix}-nx.${SubdomainName}",
+                    "domainPrefix": "${MarketUrlPrefix}-nx",
+                    "http": {
+                      "method": "GET",
+                      "path": "/",
+                      "protocol": "HTTP/1.1",
+                      "sourceIp": "42.200.211.118",
+                      "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/95.0.4638.50 Mobile/15E148 Safari/604.1"
+                    },
+                    "requestId": "I14hLgA9tjMEJbA=",
+                    "routeKey": "$default",
+                    "stage": "$default",
+                    "time": "15/Nov/2021:10:47:48 +0000",
+                    "timeEpoch": 1636973268127
+                  },
+                  "isBase64Encoded": false
+                }
+              - MarketUrlPrefix: !Ref 'MarketUrlPrefix'
+                SubdomainName: !Sub '{{resolve:ssm:/${StackSet}/infra/subdomain-name}}'
+            Schedule: rate(5 minutes)
+          Type: Schedule
+      ImageUri: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${BuildRepositoryName}:${BuildTrackedReferenceName}'
+      MemorySize: 2048
+      PackageType: Image
+      Role: !GetAtt 'NextSsrEngineRole.Arn'
+      Timeout: 30
+    Type: AWS::Serverless::Function
+  NextSsrEngineRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: 'Allow'
+            Principal:
+              Service:
+                - 'lambda.amazonaws.com'
+            Sid: 'AllowLambdaServiceToAssumeRole'
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Effect: Allow
+                Resource:
+                  - arn:aws:logs:*:*:*
+              - Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Effect: Allow
+                Resource:
+                  - !GetAtt 'ReactWebappBucket.Arn'
+            Version: '2012-10-17'
+          PolicyName: LambdaPolicy
+    Type: 'AWS::IAM::Role'
+  NextSsrEngineUpdaterStack:
+    Properties:
+      Location: ./infra-next-ssr-engine-updater/template.yml
+      Parameters:
+        BuildPipelineName: !Ref 'BuildPipelineName'
+        BuildRepositoryName: !Ref 'BuildRepositoryName'
+        BuildTrackedReferenceName: !Ref 'BuildTrackedReferenceName'
+        BuildTrackedReferenceType: !Ref 'BuildTrackedReferenceType'
+        CloudfrontDistribution: !Ref 'CloudfrontDistribution'
+        NextSsrEngineArn: !GetAtt 'NextSsrEngine.Arn'
+        NodeEnv: !Ref 'NodeEnv'
+        StackName: !Ref 'StackName'
+        StackSet: !Ref 'StackSet'
+    Type: AWS::Serverless::Application
+  ReactEndpointARecord:
+    Metadata:
+      WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+    Properties:
+      AliasTarget:
+        DNSName: s3-website-ap-northeast-1.amazonaws.com
+        HostedZoneId: Z2M4EHUR26P7ZW
+      HostedZoneId: !Sub '{{resolve:ssm:/${StackSet}/infra/hosted-zones/default/id}}'
+      Name: !Sub
+        - '${MarketUrlPrefix}-rx.${SubdomainName}'
+        - SubdomainName: !Sub '{{resolve:ssm:/${StackSet}/infra/subdomain-name}}'
+      Type: A
+    Type: AWS::Route53::RecordSet
+  ReactWebappBucket:
+    DeletionPolicy: Retain
+    Metadata:
+      WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+    Properties:
+      BucketName: !Sub
+        - '${MarketUrlPrefix}-rx.${SubdomainName}'
+        - SubdomainName: !Sub '{{resolve:ssm:/${StackSet}/infra/subdomain-name}}'
+      WebsiteConfiguration:
+        ErrorDocument: index.html
+        IndexDocument: index.html
+    Type: AWS::S3::Bucket
+  ServerlessHttpApi:
+    Properties:
+      StageName: Prod
+    Type: AWS::ApiGatewayV2::Api
+  SsrEndpointARecord:
+    Metadata:
+      WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+    Properties:
+      AliasTarget:
+        DNSName: !GetAtt 'SsrEndpointSubdomainName.RegionalDomainName'
+        HostedZoneId: !GetAtt 'SsrEndpointSubdomainName.RegionalHostedZoneId'
+      HostedZoneId: !Sub '{{resolve:ssm:/${StackSet}/infra/hosted-zones/default/id}}'
+      Name: !Sub
+        - '${MarketUrlPrefix}-nx.${SubdomainName}'
+        - SubdomainName: !Sub '{{resolve:ssm:/${StackSet}/infra/subdomain-name}}'
+      Type: A
+    Type: AWS::Route53::RecordSet
+  SsrEndpointMapping:
+    Properties:
+      ApiId: !Ref 'ServerlessHttpApi'
+      DomainName: !Ref 'SsrEndpointSubdomainName'
+      Stage: !Ref 'ServerlessHttpApiApiGatewayDefaultStage'
+    Type: AWS::ApiGatewayV2::ApiMapping
+  SsrEndpointSubdomainName:
+    Metadata:
+      WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+    Properties:
+      DomainName: !Sub
+        - '${MarketUrlPrefix}-nx.${SubdomainName}'
+        - SubdomainName: !Sub '{{resolve:ssm:/${StackSet}/infra/subdomain-name}}'
+      DomainNameConfigurations:
+        - CertificateArn: !Sub '{{resolve:ssm:/${StackSet}/infra/certificates/root/regional/arn}}'
+          EndpointType: REGIONAL
+          SecurityPolicy: TLS_1_2
+    Type: AWS::ApiGatewayV2::DomainName
+Transform: AWS::Serverless-2016-10-31

@@ -1,0 +1,13 @@
+importOrder:
+  - ^react(/.*)?$
+  - ^next(/.*)?$
+  - ^graphql.*$
+  - ^@mui/material$
+  - ^@mui/.*$
+  - ^[@a-zA-Z]
+  - ^[./]
+importOrderParserPlugins:
+  - jsx
+  - typescript
+importOrderSeparation: true
+importOrderSortSpecifiers: true

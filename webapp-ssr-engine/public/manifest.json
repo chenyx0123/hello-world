@@ -1,0 +1,16 @@
+{
+  "background_color": "#ffffff",
+  "description": "一個始於香港的漫畫、電子書、遊戲、同人周邊商品 線上販售平台",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "300x300",
+      "type": "image/png"
+    }
+  ],
+  "name": "飛天奶茶 未來墟: 同人周邊商品 線上販售",
+  "short_name": "飛天奶茶 未來墟",
+  "start_url": ".",
+  "theme_color": "#000000"
+}
