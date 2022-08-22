@@ -13,7 +13,7 @@ jobs:
         run: |
           for f in `find . -name "*.yml"`
           do
-            a=$(yq .Resources $f |jq '.|to_entries|.[]| if .value|[leaf_paths as $path | {"key": $path | join("_"), "value": getpath($path)}]|from_entries|select([.[]]|.[]|test(".resolve."))|keys|map(select(.|contains("Metadata_WorkaroundSubSSM")))|any then empty else .key end'|| true)
+            a=`yq .Resources $f |(jq '.|to_entries|.[]| if .value|[leaf_paths as $path | {"key": $path | join("_"), "value": getpath($path)}]|from_entries|select([.[]]|.[]|test(".resolve."))|keys|map(select(.|contains("Metadata_WorkaroundSubSSM")))|any then empty else .key end')|| true`
             if [[ -n "$a" ]]
             then
               echo "following resources need metadata field:"
