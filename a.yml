@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Conditions:
+  IsDevelopment: !Equals
+    - !Ref 'NodeEnv'
+    - 'development'
+  IsNotDevelopment: !Not
+    - !Equals
+      - !Ref 'NodeEnv'
+      - 'development'
+  IsNotProduction: !Not
+    - !Equals
+      - !Ref 'NodeEnv'
+      - 'production'
+  IsProduction: !Equals
+    - !Ref 'NodeEnv'
+    - 'production'
+  IsStaging: !Equals
+    - !Ref 'NodeEnv'
+    - 'staging'
+Description: |
+  Development:
+  ```
+  export SS=dev;
+  export SN=graphql-gateway; yes | sam deploy --resolve-s3 --s3-prefix=$SN --stack-name $SS-$SN -t ./cfn-application-stack.yml --parameter-overrides StackName=$SN StackSet=$SS `cat development.properties` WorkaroundSubSSM=$(date --iso-8601=s)
+  ```
+
+  Staging:
+  ```
+  export SS=stage;
+  export SN=graphql-gateway; yes | sam deploy --resolve-s3 --s3-prefix=$SN --stack-name $SS-$SN -t ./cfn-application-stack.yml --parameter-overrides StackName=$SN StackSet=$SS `cat staging.properties` WorkaroundSubSSM=$(date --iso-8601=s)
+  ```
+
+  Production:
+  ```
+  export SP=prod SN=graphql-gateway; sam deploy --resolve-s3 --s3-prefix=$SN --stack-name $SP-$SN -t ./cfn-application-stack.yml --parameter-overrides StackName=$SN StackSet=$SP `cat production.properties` WorkaroundSubSSM=$(date --iso-8601=s)
+  ```
+Parameters:
+  ApiBasePath:
+    Default: 'graphql'
+    Type: String
+  FMTAcctShopId:
+    Type: Number
+  FMTAcctUserId:
+    Type: Number
+  NodeEnv:
+    AllowedValues:
+      - 'development'
+      - 'staging'
+      - 'production'
+    Type: String
+  StackName:
+    Type: String
+    Default: 'test-stack-1'
+  StackSet:
+    Type: String
+  StripeApiEndpointSecretKey:
+    Type: String
+  StripeApiSecretKey:
+    Type: String
+  TwilioAPIKey:
+    Type: String
+  TwilioAPISecret:
+    Type: String
+  TwilioAccountSID:
+    Type: String
+  TwilioAuthToken:
+    Type: String
+  TwilioChatServiceSID:
+    Type: String
+  WooCommerceDefaultCategoryID:
+    Type: Number
+  WooCommerceShippingClass:
+    Type: Number
+  WordpressSecret:
+    Type: String
+  WorkaroundSubSSM:
+    Type: String
+Resources:
+  ExternalRestApiGraphQLGetMethod:
+    Metadata:
+      # WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: GET
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GraphQLGateway.Arn}/invocations'
+      OperationName: !Sub 'GET /${ApiBasePath}'
+      ResourceId: !Ref 'ExternalRestApiGraphQLResource'
+      RestApiId: !Sub '{{resolve:ssm:/${StackSet}/infra/api/http/public/id}}'
+    Type: AWS::ApiGateway::Method
+
+  ExternalRestApiGraphQLResource:
+    Metadata:
+      WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+    Properties:
+      ParentId: !Sub '{{resolve:ssm:/${StackSet}/infra/api/http/public/resource/root/id}}'
+      PathPart: !Ref 'ApiBasePath'
+      RestApiId: !Sub '{{resolve:ssm:/${StackSet}/infra/api/http/public/id}}'
+    Type: 'AWS::ApiGateway::Resource'
+
+Transform: AWS::Serverless-2016-10-31
