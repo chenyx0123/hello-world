@@ -22,7 +22,7 @@ jobs:
             fi
           done
 name: Check resources
-'true':
+on:
   pull_request:
     branches:
       - master
