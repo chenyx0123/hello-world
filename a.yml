@@ -78,7 +78,7 @@ Parameters:
 Resources:
   ExternalRestApiGraphQLGetMethod:
     Metadata:
-      # WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
+      WorkaroundSubSSM: !Ref 'WorkaroundSubSSM'
     Properties:
       AuthorizationType: NONE
       HttpMethod: GET
